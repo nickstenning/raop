@@ -45,8 +45,6 @@ class Net::RAOP::Client
       announce = Net::RTSP::Announce.new(sac, key, iv)
       response = client.rtsp_client.request(announce)
 
-      # FIXME Check for audio cable hookup
-
       response = client.rtsp_client.request(Net::RTSP::Setup.new)
 
       # HTTP 453 "Not Enough Bandwidth" response indicates that another RAOP
@@ -54,7 +52,12 @@ class Net::RAOP::Client
       if response.code == "453"
         raise "RAOP Server returned 453 'Not Enough Bandwith'. Perhaps another client is already connected?"
       end
-      
+
+      # Check to ensure audio jack is connected.
+      if aj = response['audio-jack-status'] and aj.split(';').first != "connected"
+        raise "Not going to stream with no audio jack connected."
+      end
+
       transport_info = {}
       response['transport'].split(';').each do |token|
         k, v = token.split('=', 2)
